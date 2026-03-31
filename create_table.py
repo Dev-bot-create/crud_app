@@ -1,0 +1,18 @@
+from db import get_connection
+
+conn = get_connection()
+cur = conn.cursor()
+
+cur.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    age INT
+)
+""")
+
+conn.commit()
+cur.close()
+conn.close()
+
+print("Table created successfully!")

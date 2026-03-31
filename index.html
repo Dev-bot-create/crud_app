@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CRUD App</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+    .list-group-item {
+        transition: all 0.3s ease;
+    }
+
+    .list-group-item:hover {
+        transform: scale(1.02);
+    }
+    </style>
+</head>
+<body class="bg-light">
+
+<div class="container mt-5">
+    <h1 class="text-center mb-4">User Management</h1>
+
+    <!-- Add User Form -->
+    <div class="card p-3 mb-4 shadow">
+        <div id="alertBox"></div>
+        <h4>Add User</h4>
+        <div class="row g-2">
+            <div class="col">
+                <input id="name" class="form-control" placeholder="Enter name">
+            </div>
+            <div class="col">
+                <input id="age" class="form-control" type="number" placeholder="Enter age">
+            </div>
+            <div class="col">
+                <button id="submitBtn" class="btn btn-primary w-100" onclick="addUser()">
+                    <i class="bi bi-plus-circle"></i> Add
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Users List -->
+    <div class="card p-3 shadow">
+        <h4>Users</h4>
+        <ul id="userList" class="list-group"></ul>
+    </div>
+</div>
+
+<script>
+const API_URL = "http://127.0.0.1:5000/users";
+
+let editingUserId = null;
+
+// ALERT
+function showAlert(message, type="success") {
+    const alertBox = document.getElementById("alertBox");
+
+    alertBox.innerHTML = `
+        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `;
+
+    setTimeout(() => {
+        alertBox.innerHTML = "";
+    }, 3000);
+}
+
+// FETCH USERS
+async function getUsers() {
+    try {
+        const res = await fetch(API_URL);
+        const users = await res.json();
+
+        const list = document.getElementById("userList");
+        list.innerHTML = "";
+
+        users.forEach(user => {
+            const li = document.createElement("li");
+            li.className = "list-group-item d-flex justify-content-between align-items-center";
+
+            li.innerHTML = `
+                <span>
+                    <strong>${user.name}</strong> (Age: ${user.age})
+                </span>
+                <div>
+                    <button class="btn btn-sm btn-warning me-2" onclick="fillForm(${user.id}, '${user.name}', ${user.age})">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </div>
+            `;
+            list.appendChild(li);
+        });
+
+    } catch (error) {
+        showAlert("Error loading users", "danger");
+    }
+}
+
+// ADD OR UPDATE USER
+async function addUser() {
+    const nameInput = document.getElementById("name");
+    const ageInput = document.getElementById("age");
+
+    const name = nameInput.value;
+    const age = ageInput.value;
+
+    if (!name || !age) {
+        showAlert("Name and age are required", "warning");
+        return;
+    }
+
+    try {
+        if (editingUserId) {
+            // UPDATE
+            await fetch(`${API_URL}/${editingUserId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, age: parseInt(age) })
+            });
+
+            showAlert("User updated successfully!", "success");
+            editingUserId = null;
+
+            document.getElementById("submitBtn").innerText = "Add";
+
+        } else {
+            // CREATE
+            await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, age: parseInt(age) })
+            });
+
+            showAlert("User added successfully!", "success");
+        }
+
+        // Clear inputs
+        nameInput.value = "";
+        ageInput.value = "";
+
+        getUsers();
+
+    } catch (error) {
+        showAlert("Something went wrong", "danger");
+    }
+}
+
+// FILL FORM FOR UPDATE
+function fillForm(id, name, age) {
+    document.getElementById("name").value = name;
+    document.getElementById("age").value = age;
+
+    editingUserId = id;
+
+    const submitBtn = document.getElementById("submitBtn").innerText="Update";
+}
+
+// DELETE USER
+async function deleteUser(id) {
+    const confirmDelete = confirm("Are you sure you want to delete this user?");
+    if (!confirmDelete) return;
+
+    try {
+        await fetch(`${API_URL}/${id}`, {
+            method: "DELETE"
+        });
+
+        showAlert("User deleted successfully!", "success");
+        getUsers();
+
+    } catch (error) {
+        showAlert("Error deleting user", "danger");
+    }
+}
+
+// LOAD USERS
+getUsers();
+</script>
+
+</body>
+</html>
